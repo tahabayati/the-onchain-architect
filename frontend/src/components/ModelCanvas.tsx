@@ -69,16 +69,28 @@ export function ModelCanvas({ selectedFile }: ModelCanvasProps) {
   }
 
   return (
-    <div className="relative h-full min-h-96 w-full">
-      <div className="pointer-events-none absolute left-4 top-4 z-10 rounded-md border border-slate-700 bg-slate-900/80 px-3 py-1 font-mono text-xs text-sky-400 backdrop-blur-sm">
-        Previewing: {selectedFile.name}
+    <div className="relative flex h-full min-h-96 w-full flex-col">
+      <div className="pointer-events-none absolute left-4 top-4 z-10 flex flex-col gap-1">
+        <span className="w-fit rounded border border-slate-700 bg-slate-900/90 px-2.5 py-1 font-mono text-xs text-sky-400">
+          Staged: {selectedFile.name}
+        </span>
+        <span className="font-mono text-[11px] text-slate-400">
+          Bounding wireframe volume (prototype)
+        </span>
       </div>
-      <Canvas camera={{ position: [4, 3, 4], fov: 50 }}>
-        <ambientLight intensity={0.6} />
-        <directionalLight position={[5, 5, 5]} intensity={1.2} />
-        <gridHelper args={[12, 12, "#334155", "#1e293b"]} position={[0, -2, 0]} />
-        <RotatingBox />
-      </Canvas>
+
+      <div className="flex-1 min-h-80 w-full">
+        <Canvas camera={{ position: [4, 3, 4], fov: 50 }}>
+          <ambientLight intensity={0.6} />
+          <directionalLight position={[5, 5, 5]} intensity={1.2} />
+          <gridHelper args={[12, 12, "#334155", "#1e293b"]} position={[0, -2, 0]} />
+          <RotatingBox />
+        </Canvas>
+      </div>
+
+      <div className="border-t border-slate-800 bg-slate-950/80 px-4 py-2 font-mono text-[11px] text-slate-400">
+        Milestone 1 Scope: Direct parametric entity parsing (BIM walls, doors, slabs) via native IfcOpenShell.
+      </div>
     </div>
   );
 }

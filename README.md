@@ -18,6 +18,8 @@ This project connects Filecoin's decentralized storage with FEVM contracts to cr
 
 The video shows the full workflow: uploading an `.ifc` model in the UI, backend validation and hashing, IPFS upload via Lighthouse, and the MetaMask-signed `anchorBlueprint(cid, hash)` transaction on the Filecoin Calibration testnet.
 
+A live demo connected to the Calibration testnet is available at [onchain.tahabayati.dev](https://onchain.tahabayati.dev).
+
 ## Features
 
 - Drag-and-drop `.ifc` and `.gltf` upload with a 3D wireframe preview (React-Three-Fiber).

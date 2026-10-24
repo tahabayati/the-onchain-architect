@@ -31,6 +31,7 @@ import {
   ACCEPTED_EXTENSIONS,
   formatSize,
   isSupportedFileName,
+  shortenAddress,
 } from "@/utils/formatters";
 
 // FastAPI backend endpoint (override with NEXT_PUBLIC_API_URL in .env.local).
@@ -96,6 +97,24 @@ export default function Home() {
     setTxHash(undefined);
   }, []);
 
+  /** Generates a lightweight IFC sample model in memory for reviewer convenience. */
+  const handleLoadSample = useCallback(() => {
+    const sampleIfcContent = `ISO-10303-21;
+HEADER;
+FILE_DESCRIPTION(('ViewDefinition [CoordinationView]'),'2;1');
+FILE_NAME('sample_villa.ifc','2026-10-24T12:00:00',('Architect'),('Onchain Studio'),'IfcOpenShell','TheOnchainArchitect','Approved');
+FILE_SCHEMA(('IFC4'));
+ENDSEC;
+DATA;
+#1=IFCPROJECT('0Yv_4O$EX0h8h9$rJ1v8X$',#2,'Sample Villa Project',$,$,$,$,(#3),#4);
+ENDSEC;
+END-ISO-10303-21;`;
+    const file = new File([sampleIfcContent], "sample_villa.ifc", {
+      type: "application/x-step",
+    });
+    handleFile(file);
+  }, [handleFile]);
+
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setIsDragging(false);
@@ -104,19 +123,6 @@ export default function Home() {
 
   /**
    * End-to-end anchoring flow: Browser -> FastAPI -> IPFS/Filecoin -> FEVM.
-   *
-   *  STEP 1 (off-chain storage): POST the raw file to FastAPI. The backend
-   *         pushes it to IPFS through Lighthouse (producing a content-derived
-   *         CID) and computes a hash of the file bytes.
-   *  STEP 2 (bridge): Read `ipfs_cid` and `file_hash` from the JSON response.
-   *         These two values are the cryptographic fingerprints of the file.
-   *  STEP 3 (on-chain proof): Ask the user's wallet to sign a transaction
-   *         calling `anchorBlueprint(cid, hash)` on ArchitectRegistry (FEVM,
-   *         Filecoin Calibration). Anyone can later re-hash the file and
-   *         compare it with the immutable on-chain record.
-   *
-   * Every step is wrapped in try/catch so failures (backend down, upload
-   * rejected, wallet rejection, reverted tx) surface as readable UI errors.
    */
   const handleAnchor = async () => {
     if (!selectedFile) return;
@@ -127,16 +133,15 @@ export default function Home() {
 
     try {
       // ---- STEP 1: upload to FastAPI (which pins to IPFS via Lighthouse) ----
-      setStatus("uploading"); // UI: "Uploading to IPFS via Lighthouse..."
+      setStatus("uploading");
 
       const formData = new FormData();
-      formData.append("file", selectedFile); // field name must match FastAPI param
+      formData.append("file", selectedFile);
 
       let response: Response;
       try {
         response = await fetch(UPLOAD_URL, { method: "POST", body: formData });
       } catch {
-        // fetch only rejects on network-level problems (server down, CORS...).
         throw new Error(
           `Cannot reach the backend at ${UPLOAD_URL}. Is FastAPI running (and CORS enabled)?`,
         );
@@ -157,7 +162,7 @@ export default function Home() {
       setResult(data);
 
       // ---- STEP 3: anchor CID + hash on the FEVM smart contract ----
-      setStatus("awaitingWallet"); // UI: "Awaiting Wallet Approval..."
+      setStatus("awaitingWallet");
 
       const hash = await writeContractAsync({
         address: ARCHITECT_REGISTRY_ADDRESS,
@@ -167,13 +172,11 @@ export default function Home() {
         chainId: filecoinCalibration.id,
       });
 
-      // Wallet approved and broadcast the tx; now wait for it to be mined.
       setTxHash(hash);
       setStatus("confirming");
     } catch (err) {
       console.error("Anchoring failed:", err);
       const message = err instanceof Error ? err.message : String(err);
-      // Wallet rejections get a friendlier message than the raw viem error.
       setAnchorError(
         /user rejected|denied/i.test(message)
           ? "Transaction was rejected in your wallet. The file is uploaded to IPFS but not yet anchored on-chain."
@@ -195,15 +198,48 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col bg-slate-950 text-slate-200">
       {/* ---------- Header ---------- */}
-      <header className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
-        <div>
-          <h1 className="text-lg font-semibold tracking-tight text-white">
-            The Onchain Architect
-          </h1>
-          <p className="font-mono text-xs text-slate-500">
-            Verifiable architectural files on Filecoin
-          </p>
+      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 px-6 py-4">
+        <div className="flex items-center gap-4">
+          <div>
+            <h1 className="text-base font-medium tracking-tight text-white">
+              The Onchain Architect
+            </h1>
+            <p className="text-xs text-slate-500">
+              Verifiable architectural models on Filecoin
+            </p>
+          </div>
+
+          <div className="hidden sm:flex items-center gap-3 border-l border-slate-800 pl-4 font-mono text-xs text-slate-500">
+            <span>
+              network:{" "}
+              <span
+                className={
+                  isWrongNetwork ? "text-amber-400 font-medium" : "text-slate-300"
+                }
+              >
+                {!isConnected
+                  ? "calibration"
+                  : isWrongNetwork
+                  ? "wrong-network (need 314159)"
+                  : "calibration"}
+              </span>
+            </span>
+            <span className="text-slate-700">|</span>
+            <a
+              href={`https://calibration.filfox.info/en/address/${ARCHITECT_REGISTRY_ADDRESS}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-slate-500 hover:text-slate-300 transition"
+              title="Inspect registry contract on Filfox explorer"
+            >
+              contract:{" "}
+              <span className="text-slate-300 underline underline-offset-2 decoration-slate-700 hover:decoration-slate-400">
+                {shortenAddress(ARCHITECT_REGISTRY_ADDRESS)}
+              </span>
+            </a>
+          </div>
         </div>
+
         <ConnectWalletButton />
       </header>
 
@@ -257,6 +293,18 @@ export default function Home() {
             )}
           </div>
 
+          {/* Quick-action helper for reviewers without an IFC file on their machine */}
+          <div className="flex items-center justify-between px-1 text-xs text-slate-500">
+            <span>No model file at hand?</span>
+            <button
+              type="button"
+              onClick={handleLoadSample}
+              className="font-medium text-sky-400 hover:text-sky-300 hover:underline"
+            >
+              Load sample_villa.ifc
+            </button>
+          </div>
+
           {isWrongNetwork ? (
             <div className="flex flex-col gap-2">
               <button
@@ -298,22 +346,48 @@ export default function Home() {
           )}
 
           {result && (
-            <div className="rounded-md border border-slate-700 bg-slate-900 px-4 py-3 font-mono text-xs text-slate-300">
-              <p className="mb-1 text-sm font-semibold text-white">
-                {isMined ? "Anchored on Filecoin ✓" : "Uploaded to IPFS"}
-              </p>
-              <p className="break-all">CID: {result.ipfs_cid}</p>
-              <p className="break-all">Hash: {result.file_hash}</p>
-              {txHash && (
-                <a
-                  href={`https://calibration.filfox.info/en/message/${txHash}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-1 block break-all text-sky-400 hover:underline"
-                >
-                  Tx: {txHash}
-                </a>
-              )}
+            <div className="rounded-md border border-slate-700 bg-slate-900 p-4 font-mono text-xs text-slate-300">
+              <div className="mb-3 flex items-center justify-between border-b border-slate-800 pb-2">
+                <span className="font-semibold text-white">
+                  {isMined ? "Anchored on Filecoin ✓" : "Uploaded to IPFS"}
+                </span>
+                <span className="text-slate-500">{result.filename}</span>
+              </div>
+
+              <div className="space-y-2">
+                <div>
+                  <span className="text-slate-500">IPFS CID: </span>
+                  <a
+                    href={`https://gateway.lighthouse.storage/ipfs/${result.ipfs_cid}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="break-all text-sky-400 hover:underline"
+                    title="Inspect file on Lighthouse IPFS gateway"
+                  >
+                    {result.ipfs_cid} ↗
+                  </a>
+                </div>
+
+                <div>
+                  <span className="text-slate-500">SHA-256: </span>
+                  <span className="break-all text-slate-300">{result.file_hash}</span>
+                </div>
+
+                {txHash && (
+                  <div className="pt-2 border-t border-slate-800">
+                    <span className="text-slate-500">FEVM Tx: </span>
+                    <a
+                      href={`https://calibration.filfox.info/en/message/${txHash}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="break-all text-sky-400 hover:underline"
+                      title="View transaction on Filfox Calibration explorer"
+                    >
+                      {txHash} ↗
+                    </a>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </section>
