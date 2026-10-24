@@ -316,7 +316,16 @@ END-ISO-10303-21;`;
                 {isSwitching ? "Switching Network..." : "Switch to Filecoin Calibration"}
               </button>
               <p className="text-xs text-amber-400">
-                Wallet is connected to an unsupported network. Please switch to Filecoin Calibration (Chain ID 314159) to anchor blueprints.
+                Connected to an unsupported network. Please switch to Filecoin Calibration (Chain ID 314159). Need RPC details? See the{" "}
+                <a
+                  href="https://github.com/tahabayati/the-onchain-architect#troubleshooting"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline underline-offset-2 hover:text-amber-200"
+                >
+                  troubleshooting guide
+                </a>
+                .
               </p>
             </div>
           ) : (
@@ -330,11 +339,31 @@ END-ISO-10303-21;`;
                 {buttonLabel[effectiveStatus]}
               </button>
               {!canAnchor && !isBusy && (
-                <p className="text-xs text-slate-500">
-                  {!isConnected
-                    ? "Connect your wallet to enable anchoring."
-                    : "Select a .ifc or .gltf file to enable anchoring."}
-                </p>
+                <div className="flex flex-col gap-1 text-xs">
+                  {!isConnected ? (
+                    <>
+                      <p className="text-slate-400">
+                        Connect your wallet to Filecoin Calibration (tFIL required for gas) to anchor.
+                      </p>
+                      <p className="text-[11px] text-slate-500">
+                        Having issues adding Calibration or need testnet tFIL? Check our{" "}
+                        <a
+                          href="https://github.com/tahabayati/the-onchain-architect#troubleshooting"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-sky-400 underline underline-offset-2 hover:text-sky-300"
+                        >
+                          troubleshooting guide on GitHub
+                        </a>
+                        .
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-slate-500">
+                      Select a .ifc or .gltf file to enable anchoring.
+                    </p>
+                  )}
+                </div>
               )}
             </>
           )}
