@@ -387,11 +387,11 @@ END-ISO-10303-21;`;
                 <div>
                   <span className="text-slate-500">IPFS CID: </span>
                   <a
-                    href={`https://gateway.lighthouse.storage/ipfs/${result.ipfs_cid}`}
+                    href={`https://explore.ipld.io/#/explore/${result.ipfs_cid}`}
                     target="_blank"
                     rel="noreferrer"
                     className="break-all text-sky-400 hover:underline"
-                    title="Inspect file on Lighthouse IPFS gateway"
+                    title="Inspect CID on Protocol Labs IPLD explorer"
                   >
                     {result.ipfs_cid} ↗
                   </a>
