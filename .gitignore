@@ -1,0 +1,79 @@
+# ==============================================================================
+# The Onchain Architect - Root Git Ignore Configuration
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Environment Variables & Secrets (FEVM Private Keys, Lighthouse Keys, RPC URLs)
+# ------------------------------------------------------------------------------
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+*.pem
+
+# ------------------------------------------------------------------------------
+# Node.js & Dependencies (Root & Frontend)
+# ------------------------------------------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+# ------------------------------------------------------------------------------
+# Next.js Build Outputs & Static Exports
+# ------------------------------------------------------------------------------
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+
+# ------------------------------------------------------------------------------
+# Python & FastAPI Backend (.venv, bytecode, runtime artifacts)
+# ------------------------------------------------------------------------------
+venv/
+.venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+*.sqlite3
+
+# ------------------------------------------------------------------------------
+# Hardhat & Solidity (Contracts compilation artifacts, cache, and test reports)
+# ------------------------------------------------------------------------------
+contracts/artifacts/
+contracts/cache/
+contracts/ignition/deployments/*/build-info/
+contracts/ignition/deployments/*/artifacts/
+artifacts/
+cache/
+typechain/
+typechain-types/
+coverage/
+coverage.json
+.openzeppelin/
+
+# ------------------------------------------------------------------------------
+# Operating System & IDE Files
+# ------------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
