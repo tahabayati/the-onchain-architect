@@ -11,7 +11,7 @@ It receives 3D building model files (`.ifc`, `.gltf`), hashes them with SHA-256,
 1. **Size check:** Rejects files over 50 MB both upfront and while reading chunk buffers so the server never runs out of memory.
 2. **SHA-256 hashing:** Hashes the exact bytes received in memory.
 3. **IFC validation:** Runs a preliminary validation check (`validate_ifc_model`).  
-   *(POC Note: Currently a lightweight placeholder. Full IfcOpenShell geometry and schema validation will be added in Grant Milestone 1).*
+   *(POC Note: Currently a lightweight placeholder. Full IfcOpenShell geometry and schema validation is planned, see "What's next" in the root README).*
 4. **Lighthouse upload:** Writes bytes to an isolated temporary directory, uploads to Lighthouse, cleans up the temp directory, and extracts the CID.
 5. **JSON response:** Returns `{ filename, file_hash, ipfs_cid }`.
 
@@ -72,7 +72,7 @@ uvicorn main:app --reload --port 8000
 We use `pytest` with `httpx` to test the API:
 
 ```bash
-pytest backend/tests
+pytest tests
 ```
 
 The tests mock the Lighthouse SDK so you don't need real API keys or an internet connection to run them. The suite covers:

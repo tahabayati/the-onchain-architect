@@ -1,14 +1,12 @@
 # Contributing to The Onchain Architect
 
-Hey! Thanks for checking out the project. 
+Thanks for checking out the project.
 
 The Onchain Architect is an open-source boilerplate built to show how you can store heavy 3D architectural models (.ifc, .gltf) on Filecoin via IPFS and anchor proofs on FEVM with smart contracts.
 
 Whether you're fixing a typo, improving 3D rendering performance, adding proper IFC parsing, or writing tests, contributions are welcome.
 
----
-
-## How the Monorepo Works
+## How the monorepo works
 
 The codebase is split into three independent directories so each part can be run and tested on its own:
 
@@ -18,16 +16,14 @@ The codebase is split into three independent directories so each part can be run
 
 Keep them decoupled: don't import frontend packages into the contracts or backend logic into the frontend.
 
----
-
-## Setting Up Locally
+## Setting up locally
 
 You'll need Node.js (>= 20), Python (>= 3.10), and MetaMask installed.
 
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/<your-username>/the-onchain-architect.git
+git clone https://github.com/tahabayati/the-onchain-architect.git   # or your fork
 cd the-onchain-architect
 ```
 
@@ -49,7 +45,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env
 # Put your Lighthouse API key in .env (get one for free at files.lighthouse.storage)
-pytest backend/tests
+pytest tests
 uvicorn main:app --reload --port 8000
 ```
 
@@ -64,25 +60,21 @@ npm run dev
 
 Open `http://localhost:3000`, connect your wallet on Calibration, and try uploading a model.
 
----
+## Ground rules for PRs
 
-## Ground Rules for PRs
+A few practical rules:
 
-Nothing bureaucratic here, just practical habits that keep the repo clean:
-
-1. **No hardcoded secrets:** Never commit private keys, `.env` files, or API keys. Always use `.env.example`.
-2. **AI assistants & secret hygiene:** If you use AI tools (Cursor, Copilot, ChatGPT, Claude) while coding, double-check that they don't accidentally read or paste your local `.env` values, testnet private keys, or Lighthouse tokens into committed code or public prompts.
-3. **Clear errors:** If something fails (backend down, file too large, rejected transaction), catch it and show a clear message instead of failing silently.
-4. **Keep comments human:** When adding a new file or modifying existing logic, add a short comment at the top explaining what it does and why it exists.
-5. **Run tests before pushing:**
+1. No hardcoded secrets. Never commit private keys, `.env` files, or API keys. Always use `.env.example`.
+2. AI assistants and secrets. If you use AI tools (Cursor, Copilot, ChatGPT, Claude) while coding, double-check that they don't accidentally read or paste your local `.env` values, testnet private keys, or Lighthouse tokens into committed code or public prompts.
+3. Clear errors. If something fails (backend down, file too large, rejected transaction), catch it and show a clear message instead of failing silently.
+4. Comment new files. When adding a new file or modifying existing logic, add a short comment at the top explaining what it does and why it exists.
+5. Run tests before pushing:
    - Contracts: `npm test` in `/contracts`
    - Backend: `pytest` in `/backend`
    - Frontend: `npm test` and `npm run lint` in `/frontend`
-6. **MIT Licensed:** Make sure any library or code you add is compatible with our MIT license.
+6. Licensing. The project is dual-licensed under MIT and Apache-2.0 (see `LICENSE-MIT` and `LICENSE-APACHE`). Make sure any library or code you add is compatible with both. By submitting a PR you agree your contribution is licensed the same way.
 
----
-
-## Submitting Changes
+## Submitting changes
 
 1. Fork the repo and make your changes in a branch:
    ```bash
@@ -94,4 +86,4 @@ Nothing bureaucratic here, just practical habits that keep the repo clean:
    ```
 3. Push to your fork and open a Pull Request against `main`. Explain briefly what changed and how you tested it.
 
-If you find a security bug or have a question, feel free to open an issue or start a GitHub discussion!
+If you find a security bug or have a question, open an issue or start a GitHub discussion.

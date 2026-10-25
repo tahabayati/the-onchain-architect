@@ -2,32 +2,30 @@
 
 An open-source starter kit for storing 3D architectural models (`.ifc`, `.gltf`) on Filecoin and anchoring their proofs on FEVM.
 
-## The Problem & The Idea
+## Problem and idea
 
-3D building blueprints are heavy files (often tens to hundreds of megabytes). They are too large to store directly on an EVM smart contract, so in practice they usually sit in email threads, shared drives, or proprietary platforms. When revisions are approved or disputes arise years later during construction, it's hard to prove which version of a file was finalized at a specific time.
+3D building models are large, often tens to hundreds of megabytes, which is far too big to store in an EVM smart contract. In practice they end up in email threads, shared drives, or proprietary platforms. Years later, when a revision is disputed during construction, it is hard to prove which version of a file was approved and when.
 
-This project connects Filecoin's decentralized storage with FEVM contracts to create a simple audit trail:
+This project keeps the file off-chain and puts a fingerprint of it on-chain:
 
-- **Heavy files live on Filecoin/IPFS:** Uploads are pinned to IPFS and backed by Filecoin storage deals through the Lighthouse SDK.
-- **Dual fingerprinting:** The backend computes a SHA-256 hash of the exact file bytes alongside the IPFS CID to ensure tamper evidence.
-- **Proof anchored on FEVM:** The smart contract (`ArchitectRegistry.sol`) records the CID, hash, and timestamp on the Filecoin Calibration testnet under your wallet address.
+- The file is uploaded to IPFS through the Lighthouse SDK. Lighthouse handles the Filecoin storage side; this repo does not track deal status yet (see What's next).
+- The backend computes a SHA-256 hash of the exact bytes it received. The upload also returns an IPFS CID. Either one lets you check later that a file is unchanged.
+- The contract (`ArchitectRegistry.sol`) records the CID, the hash and a timestamp under your wallet address on the Filecoin Calibration testnet.
 
-## 📺 Demo Video
+## Demo
 
-[▶ Watch the 3-minute End-to-End Demo on Loom](https://loom.com) *(Walkthrough video)*
+A live demo connected to the Calibration testnet runs at [onchain.tahabayati.dev](https://onchain.tahabayati.dev).
 
-The video shows the full workflow: uploading an `.ifc` model in the UI, backend validation and hashing, IPFS upload via Lighthouse, and the MetaMask-signed `anchorBlueprint(cid, hash)` transaction on the Filecoin Calibration testnet.
-
-A live demo connected to the Calibration testnet is available at [onchain.tahabayati.dev](https://onchain.tahabayati.dev).
+A recorded walkthrough has not been added yet. It will cover uploading an `.ifc` model, the backend size check and hashing, the IPFS upload through Lighthouse, and the MetaMask-signed `anchorBlueprint(cid, hash)` transaction on Calibration.
 
 ## Features
 
 - Drag-and-drop `.ifc` and `.gltf` upload with a 3D wireframe preview (React-Three-Fiber).
-- SHA-256 cryptographic hashing and IPFS CID generation.
-- Decentralized storage through the Lighthouse Python SDK.
+- SHA-256 hashing of the uploaded bytes, plus the IPFS CID returned by Lighthouse.
+- Upload to IPFS through the Lighthouse Python SDK.
 - On-chain record anchoring via `anchorBlueprint(cid, hash)` on Filecoin Calibration (Chain ID 314159).
-- Clean wallet switching and network guardrails with Wagmi and Viem.
-- Modular, decoupled architecture so each piece can be run and tested independently.
+- Wallet connection with Wagmi and Viem, and a prompt to switch to Calibration if the wallet is on another network.
+- Frontend, backend and contracts each run and test on their own.
 
 ## Architecture
 
@@ -57,14 +55,14 @@ flowchart LR
     R -. "BlueprintAnchored event" .-> W
 ```
 
-### How Verification Works
+### How verification works
 
 1. The backend receives the file and computes its SHA-256 hash in memory.
-2. The file is uploaded to IPFS through Lighthouse, which produces an immutable CID.
+2. The file is uploaded to IPFS through Lighthouse, which returns the CID.
 3. Your wallet calls `anchorBlueprint(cid, hash)` on the smart contract.
 4. Anyone who downloads the model in the future can re-hash it and check that it matches what was anchored on-chain.
 
-## Repository Structure
+## Repository structure
 
 ```text
 the-onchain-architect/
@@ -72,11 +70,12 @@ the-onchain-architect/
 ├── backend/         # FastAPI, IfcOpenShell POC, Lighthouse SDK
 ├── contracts/       # Hardhat v3, Solidity 0.8.24, Ignition deployment modules
 ├── CONTRIBUTING.md  # Contributor guidelines and workflow
-├── LICENSE          # MIT License
+├── LICENSE-MIT      # MIT License
+├── LICENSE-APACHE   # Apache License 2.0
 └── README.md        # Monorepo architecture & setup guide
 ```
 
-## Local Setup Guide
+## Local setup
 
 ### Prerequisites
 
@@ -173,7 +172,7 @@ If adding the network through Chainlist fails or hangs, add it manually in MetaM
 
 If `npx hardhat ignition deploy` fails with either message:
 
-1. **Declare the network type.** Hardhat v3 requires `type: "http"` on remote networks in `contracts/hardhat.config.ts`:
+1. Declare the network type. Hardhat v3 requires `type: "http"` on remote networks in `contracts/hardhat.config.ts`:
 
    ```typescript
    import hardhatToolboxViemPlugin from "@nomicfoundation/hardhat-toolbox-viem";
@@ -198,7 +197,7 @@ If `npx hardhat ignition deploy` fails with either message:
    });
    ```
 
-2. **Delete unused template files.** Default files like `contracts/Counter.sol` can conflict with the 0.8.24 compiler. Remove them and recompile:
+2. Delete unused template files. Default files like `contracts/Counter.sol` can conflict with the 0.8.24 compiler. Remove them and recompile:
 
    ```bash
    rm -f contracts/contracts/Counter.sol contracts/test/Counter.ts ignition/modules/Counter.ts
@@ -213,15 +212,22 @@ If the UI shows a "Chain ID mismatch (1 vs 314159)" error after you switch netwo
 2. Refresh the page.
 3. Reconnect the wallet.
 
-## What's Next
+## What's next
 
-This repository is currently a functional reference prototype. Next steps for the project:
+This is a working prototype. Planned work:
 
-- **Milestone 1:** Full IFC schema and geometry parsing via native `ifcopenshell` (inspecting walls, geometry, and storeys before upload).
-- **Milestone 2:** Chunked large-file streaming for 500MB+ production models.
-- **Milestone 3:** Filecoin deal status tracking directly in the web UI.
-- **Milestone 4:** Multi-signer approvals for architectural revision sign-offs.
+1. Real IFC validation with `ifcopenshell`: schema and geometry checks (walls, storeys) before upload. The current check in `backend/main.py` is a placeholder.
+2. Chunked streaming for models of 500 MB and up. The upload limit is 50 MB today.
+3. Filecoin deal status in the web UI.
+4. Multi-signer approvals for revision sign-offs.
 
 ## License
 
-Released under the [MIT License](./LICENSE).
+The code is dual-licensed under either of
+
+- [MIT License](./LICENSE-MIT)
+- [Apache License, Version 2.0](./LICENSE-APACHE)
+
+at your option.
+
+Unless you state otherwise, any contribution you submit for inclusion in this project is dual-licensed as above, with no additional terms or conditions.
