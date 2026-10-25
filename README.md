@@ -216,7 +216,7 @@ If the UI shows a "Chain ID mismatch (1 vs 314159)" error after you switch netwo
 
 This is a working prototype. Planned work:
 
-1. Real IFC validation with `ifcopenshell`: schema and geometry checks (walls, storeys) before upload. The current check in `backend/main.py` is a placeholder.
+1. Deeper IFC checks with `ifcopenshell`: geometry and element checks (walls, storeys). Today `backend/main.py` only confirms the file parses and reports its schema and entity count.
 2. Chunked streaming for models of 500 MB and up. The upload limit is 50 MB today.
 3. Filecoin deal status in the web UI.
 4. Multi-signer approvals for revision sign-offs.

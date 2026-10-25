@@ -27,6 +27,11 @@ from main import app, compute_sha256, MAX_FILE_SIZE
 
 client = TestClient(app)
 
+# A small valid IFC4 file (13 entities) generated with ifcopenshell.
+FIXTURE_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
+with open(os.path.join(FIXTURE_DIR, "valid-model.ifc"), "rb") as _f:
+    VALID_IFC = _f.read()
+
 
 def test_health_check():
     """
@@ -58,7 +63,7 @@ def test_upload_valid_mock_file():
     Mocks the Lighthouse SDK upload response to verify the end-to-end hashing
     and metadata extraction pipeline without making external network calls.
     """
-    test_content = b"ISO-10303-21; HEADER; FILE_DESCRIPTION(('Test IFC Model'), '2;1');"
+    test_content = VALID_IFC
     expected_hash = hashlib.sha256(test_content).hexdigest()
     mock_cid = "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
 
@@ -83,6 +88,8 @@ def test_upload_valid_mock_file():
         assert data["filename"] == "sample.ifc"
         assert data["file_hash"] == expected_hash
         assert data["ipfs_cid"] == mock_cid
+        assert data["ifc_schema"] == "IFC4"
+        assert data["ifc_entity_count"] == 13
 
 
 def test_upload_missing_lighthouse_api_key():
@@ -90,8 +97,7 @@ def test_upload_missing_lighthouse_api_key():
     Test 4: POST /upload-model/ returns HTTP 500 when LIGHTHOUSE_API_KEY is not set.
     Ensures missing configuration is caught with a clear diagnostic message.
     """
-    test_content = b"Mock building blueprint content"
-    files = {"file": ("blueprint.ifc", test_content, "application/octet-stream")}
+    files = {"file": ("blueprint.ifc", VALID_IFC, "application/octet-stream")}
 
     with patch.dict(os.environ, {"LIGHTHOUSE_API_KEY": ""}):
         response = client.post("/upload-model/", files=files)
@@ -110,3 +116,36 @@ def test_upload_file_size_exceeded():
     response = client.post("/upload-model/", files=files)
     assert response.status_code == 413
     assert "too large" in response.json()["detail"].lower() or "exceeds" in response.json()["detail"].lower()
+
+
+def test_upload_invalid_ifc_rejected_before_upload():
+    """
+    Test 6: an .ifc file that ifcopenshell cannot parse returns HTTP 422 and
+    is never sent to Lighthouse, so no storage is spent on it.
+    """
+    files = {"file": ("broken.ifc", b"This is not an IFC file", "application/octet-stream")}
+
+    with patch("main.Lighthouse") as MockLighthouse, \
+         patch.dict(os.environ, {"LIGHTHOUSE_API_KEY": "test-mock-key"}):
+        response = client.post("/upload-model/", files=files)
+
+        assert response.status_code == 422
+        assert "not a valid IFC" in response.json()["detail"]
+        MockLighthouse.return_value.upload.assert_not_called()
+
+
+def test_upload_gltf_skips_ifc_check():
+    """
+    Test 7: a .gltf file is not parsed as IFC; the IFC fields come back null.
+    """
+    mock_response = {"data": {"Name": "m.gltf", "Hash": "bafytest", "Size": 2}}
+    files = {"file": ("m.gltf", b"{}", "application/octet-stream")}
+
+    with patch("main.Lighthouse") as MockLighthouse, \
+         patch.dict(os.environ, {"LIGHTHOUSE_API_KEY": "test-mock-key"}):
+        MockLighthouse.return_value.upload.return_value = mock_response
+        response = client.post("/upload-model/", files=files)
+
+        assert response.status_code == 200
+        assert response.json()["ifc_schema"] is None
+        assert response.json()["ifc_entity_count"] is None

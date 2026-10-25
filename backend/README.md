@@ -10,10 +10,9 @@ It receives 3D building model files (`.ifc`, `.gltf`), hashes them with SHA-256,
 
 1. **Size check:** Rejects files over 50 MB both upfront and while reading chunk buffers so the server never runs out of memory.
 2. **SHA-256 hashing:** Hashes the exact bytes received in memory.
-3. **IFC validation:** Runs a preliminary validation check (`validate_ifc_model`).  
-   *(POC Note: Currently a lightweight placeholder. Full IfcOpenShell geometry and schema validation is planned, see "What's next" in the root README).*
+3. **IFC validation:** For `.ifc` files, `validate_ifc_model` opens the file with `ifcopenshell` and returns the schema (for example IFC4) and the entity count. A file that does not parse is rejected with a 422 before anything is uploaded. Other formats such as `.gltf` skip this step. Geometry and element checks are not implemented yet.
 4. **Lighthouse upload:** Writes bytes to an isolated temporary directory, uploads to Lighthouse, cleans up the temp directory, and extracts the CID.
-5. **JSON response:** Returns `{ filename, file_hash, ipfs_cid }`.
+5. **JSON response:** Returns `{ filename, file_hash, ipfs_cid, ifc_schema, ifc_entity_count }`. The two IFC fields are null for non-IFC files.
 
 ---
 
@@ -81,3 +80,5 @@ The tests mock the Lighthouse SDK so you don't need real API keys or an internet
 - End-to-end upload and hashing with mocked CID response (200)
 - Missing API key diagnostic error (500)
 - Oversized file upload rejection (413)
+- Invalid `.ifc` rejection (422) without calling Lighthouse
+- `.gltf` upload skipping the IFC check

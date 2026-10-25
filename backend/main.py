@@ -3,9 +3,10 @@ main.py - "The Storage Engine" for The Onchain Architect
 
 WHAT it does:
     A FastAPI service exposing POST /upload-model/. It receives a building
-    model file (e.g. .ifc), computes a SHA-256 hash, runs a (currently mocked)
-    IFC validation step, uploads the file to IPFS/Filecoin via Lighthouse, and
-    returns the filename, hash, and IPFS CID.
+    model file (e.g. .ifc), computes a SHA-256 hash, opens .ifc files with
+    ifcopenshell to check they parse (and reports schema and entity count),
+    uploads the file to IPFS via Lighthouse, and returns the filename, hash,
+    IPFS CID and IFC summary.
 
 WHY it exists:
     Architectural models are valuable, tamper-sensitive assets. By storing them
@@ -13,9 +14,10 @@ WHY it exists:
     content identifier (CID), anyone can later verify the file was not altered.
 
 HOW it connects to Filecoin:
-    The Lighthouse SDK (lighthouseweb3) pins the file to IPFS and backs it with
-    Filecoin storage deals. The returned CID is the permanent, content-addressed
-    pointer that a FEVM smart contract can later record on-chain.
+    The Lighthouse SDK (lighthouseweb3) uploads the file to IPFS through
+    Lighthouse. This service does not check or track Filecoin storage deals.
+    The returned CID is the content-addressed pointer that a FEVM smart
+    contract records on-chain.
 
 Run locally:
     export LIGHTHOUSE_API_KEY="your-key"   # never hardcode this
@@ -30,6 +32,7 @@ import tempfile
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+import ifcopenshell
 from lighthouseweb3 import Lighthouse
 from pydantic import BaseModel, Field
 
@@ -42,6 +45,8 @@ class UploadResponse(BaseModel):
     filename: str = Field(..., description="Sanitized original filename of the architectural model")
     file_hash: str = Field(..., description="Deterministic SHA-256 hex digest of the raw file bytes")
     ipfs_cid: str = Field(..., description="Content Identifier (CID) returned by Lighthouse on Filecoin/IPFS")
+    ifc_schema: str | None = Field(None, description="IFC schema version read by ifcopenshell (e.g. IFC4). Null for non-IFC files.")
+    ifc_entity_count: int | None = Field(None, description="Number of entities ifcopenshell parsed from the file. Null for non-IFC files.")
 
 # ---------------------------------------------------------------------------
 # Environment: load secrets from local env files so the API key never lives in
@@ -110,19 +115,33 @@ def compute_sha256(contents: bytes) -> str:
     """
     return hashlib.sha256(contents).hexdigest()
 
-# ---------------------------------------------------------------------------
-# // POC NOTE: Currently a mocked placeholder. Full IfcOpenShell schema parsing is slated for Grant Milestone 1.
-# ---------------------------------------------------------------------------
-def validate_ifc_model(contents: bytes, filename: str) -> bool:
+def validate_ifc_model(contents: bytes, filename: str) -> dict | None:
     """
-    PLACEHOLDER for ifcopenshell validation.
+    Open an .ifc file with ifcopenshell and return its schema and entity count.
 
-    Why: we want to reject malformed models BEFORE paying for permanent
-    storage. The real implementation will parse `contents` with ifcopenshell
-    and check schema/geometry. For now it only logs that validation passed.
+    Why: we reject files that do not parse BEFORE paying for permanent
+    storage. Returns None for non-IFC files (e.g. .gltf), which are not
+    checked here. Raises HTTPException(422) when an .ifc file cannot be parsed.
     """
-    logger.info("Mock IFC validation passed for '%s' (%d bytes).", filename, len(contents))
-    return True
+    if not filename.lower().endswith(".ifc"):
+        return None
+
+    try:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = os.path.join(tmp_dir, "model.ifc")
+            with open(tmp_path, "wb") as tmp_file:
+                tmp_file.write(contents)
+            model = ifcopenshell.open(tmp_path)
+            summary = {"ifc_schema": model.schema, "ifc_entity_count": len(list(model))}
+    except Exception as exc:
+        logger.warning("IFC validation failed for '%s': %s", filename, exc)
+        raise HTTPException(
+            status_code=422,
+            detail=f"'{filename}' is not a valid IFC file: {exc}",
+        )
+
+    logger.info("IFC '%s': %s, %d entities.", filename, summary["ifc_schema"], summary["ifc_entity_count"])
+    return summary
 
 
 def upload_to_lighthouse(contents: bytes, filename: str) -> str:
@@ -210,8 +229,7 @@ async def upload_model(file: UploadFile = File(...)):
     logger.info("SHA-256 for '%s': %s", filename, file_hash)
 
     # Step 3: validate before spending storage resources.
-    if not validate_ifc_model(contents, filename):
-        raise HTTPException(status_code=422, detail="IFC validation failed.")
+    ifc_summary = validate_ifc_model(contents, filename) or {}
 
     # Step 4: push to IPFS/Filecoin; raises HTTP 500 on failure.
     ipfs_cid = upload_to_lighthouse(contents, filename)
@@ -222,4 +240,5 @@ async def upload_model(file: UploadFile = File(...)):
         "filename": filename,
         "file_hash": file_hash,
         "ipfs_cid": ipfs_cid,
+        **ifc_summary,
     }

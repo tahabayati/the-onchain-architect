@@ -23,6 +23,7 @@ import {
 import { filecoinCalibration } from "wagmi/chains";
 import { ConnectWalletButton } from "@/components/ConnectWalletButton";
 import { ModelCanvas } from "@/components/ModelCanvas";
+import { VerifyFile } from "@/components/VerifyFile";
 import {
   ARCHITECT_REGISTRY_ABI,
   ARCHITECT_REGISTRY_ADDRESS,
@@ -44,6 +45,9 @@ interface UploadResponse {
   filename: string;
   file_hash: string;
   ipfs_cid: string;
+  // Filled in by the backend for .ifc files, null for other formats.
+  ifc_schema?: string | null;
+  ifc_entity_count?: number | null;
 }
 
 // Which step of the anchoring pipeline we are in.
@@ -402,6 +406,15 @@ END-ISO-10303-21;`;
                   <span className="break-all text-slate-300">{result.file_hash}</span>
                 </div>
 
+                {result.ifc_schema && (
+                  <div>
+                    <span className="text-slate-500">IFC: </span>
+                    <span className="text-slate-300">
+                      {result.ifc_schema}, {result.ifc_entity_count} entities parsed
+                    </span>
+                  </div>
+                )}
+
                 {txHash && (
                   <div className="pt-2 border-t border-slate-800">
                     <span className="text-slate-500">FEVM Tx: </span>
@@ -419,6 +432,8 @@ END-ISO-10303-21;`;
               </div>
             </div>
           )}
+
+          <VerifyFile />
         </section>
 
         {/* Right column: 3D viewport */}

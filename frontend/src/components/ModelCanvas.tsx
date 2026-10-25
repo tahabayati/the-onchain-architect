@@ -89,7 +89,7 @@ export function ModelCanvas({ selectedFile }: ModelCanvasProps) {
       </div>
 
       <div className="border-t border-slate-800 bg-slate-950/80 px-4 py-2 font-mono text-[11px] text-slate-400">
-        Milestone 1 Scope: Direct parametric entity parsing (BIM walls, doors, slabs) via native IfcOpenShell.
+        Preview shows a bounding box only. Real IFC geometry is not rendered yet.
       </div>
     </div>
   );
