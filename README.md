@@ -1,5 +1,7 @@
 # The Onchain Architect
 
+[![CI](https://github.com/tahabayati/the-onchain-architect/actions/workflows/ci.yml/badge.svg)](https://github.com/tahabayati/the-onchain-architect/actions/workflows/ci.yml)
+
 An open-source starter kit for storing 3D architectural models (`.ifc`, `.gltf`) on Filecoin and anchoring their proofs on FEVM.
 
 ## Problem and idea
